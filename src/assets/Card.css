@@ -1,0 +1,57 @@
+.main-layout {
+  display: flex;
+  gap: 20px;
+}
+
+/* LEFT SIDE */
+.product-grid {
+  flex: 3;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 15px;
+}
+
+/* RIGHT SIDE */
+.cart-container {
+  flex: 1;
+  border-left: 2px solid #ddd;
+  padding-left: 5px;
+}
+
+.cart-item {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 10px;
+  background-color: rgb(207 234 207);
+
+}
+
+.cart-item img {
+    width: 35%;
+}
+
+
+.card span {
+  display: none;
+}
+
+h2{
+    text-align: center;
+    /* background-color: #ddd; */
+    margin-top: 5px;
+
+}
+
+
+/* button for remove item */
+.remove-btn {
+  margin-top: 5px;
+  padding: 5px 10px;
+  background: black;
+  color: white;
+  border: none;
+  cursor: pointer;
+  border-radius: 5px;
+  margin-bottom: 20px;
+
+}
