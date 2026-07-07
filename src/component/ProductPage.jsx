@@ -1,14 +1,24 @@
 import React, { useEffect, useState } from "react";
 import "../assets/ProductPage.css";
-// for reactprime
 
-        
+// PrimeReact
+import { Button } from "primereact/button";
+import { InputText } from "primereact/inputtext";
+import { Dropdown } from "primereact/dropdown";
+import { Paginator } from "primereact/paginator";
+import { ConfirmDialog, confirmDialog } from "primereact/confirmdialog"; // 🔥 UPDATED
 
 // COMPONENTS
 import Card from "./Card";
 import Cart from "./Cart";
 
-const ProductPage = ({ wishlist, toggleWishlist }) => {   // NEW (props receive)
+const ProductPage = ({ wishlist, toggleWishlist }) => {
+
+  const categoryOptions = [
+    { label: "All", value: "all" },
+    { label: "Beauty", value: "beauty" },
+    { label: "Groceries", value: "groceries" },
+  ];
 
   // ================= STATE =================
   const [products, setProducts] = useState([]);
@@ -18,15 +28,16 @@ const ProductPage = ({ wishlist, toggleWishlist }) => {   // NEW (props receive)
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("all");
 
-  // CART STATE (UNCHANGED)
+  // CART STATE (Local Storage)
   const [cartItems, setCartItems] = useState(() => {
     const savedCart = localStorage.getItem("cartItems");
     return savedCart ? JSON.parse(savedCart) : [];
   });
 
-  // PAGINATION
-  const [currentPage, setCurrentPage] = useState(1);
+  // Pagination 
+  const [first, setFirst] = useState(0);   
   const productsPerPage = 6;
+
 
   // ================= FETCH =================
   const fetchProducts = async () => {
@@ -43,11 +54,12 @@ const ProductPage = ({ wishlist, toggleWishlist }) => {   // NEW (props receive)
     }
   };
 
+  // Component mount after API call 
   useEffect(() => {
     fetchProducts();
   }, []);
 
-  // ================= FILTER =================
+  // ====Filtering Logic =================
   useEffect(() => {
     let updated = products;
 
@@ -56,18 +68,16 @@ const ProductPage = ({ wishlist, toggleWishlist }) => {   // NEW (props receive)
         item.title.toLowerCase().includes(search.toLowerCase())
       );
     }
- 
+
     if (category !== "all") {
       updated = updated.filter((item) => item.category === category);
     }
 
     setFilteredProducts(updated);
-    setCurrentPage(1);
-   }, [search, category, products]);
+    setFirst(0);   // UPDATED for Pagination Reset
+  }, [search, category, products]);
 
-
-
-  // ================= Cart  LOGIC (UNCHANGED) =================
+  // =CART LOGIC -- Add to Cart=================
   const addToCart = (product) => {
     const existingItem = cartItems.find((item) => item.id === product.id);
 
@@ -83,9 +93,17 @@ const ProductPage = ({ wishlist, toggleWishlist }) => {   // NEW (props receive)
     }
   };
 
+  // 🔥 UPDATED (ConfirmDialog logic)
   const removeFromCart = (id) => {
-    const updatedCart = cartItems.filter((item) => item.id !== id);
-    setCartItems(updatedCart);
+    confirmDialog({
+      message: "Are you sure?",
+      header: "Delete Confirmation",
+      icon: "pi pi-exclamation-triangle",
+      accept: () => {
+        const updatedCart = cartItems.filter((item) => item.id !== id);
+        setCartItems(updatedCart);
+      },
+    });
   };
 
   // SAVE CART
@@ -93,38 +111,29 @@ const ProductPage = ({ wishlist, toggleWishlist }) => {   // NEW (props receive)
     localStorage.setItem("cartItems", JSON.stringify(cartItems));
   }, [cartItems]);
 
-
-  // ================= Pagination =================
-  const indexOfLastProduct = currentPage * productsPerPage;
-  const indexOfFirstProduct = indexOfLastProduct - productsPerPage;
-
+  // ================= PAGINATION LOGIC =================
   const currentProducts = filteredProducts.slice(
-    indexOfFirstProduct,
-    indexOfLastProduct
-  );
-
-  const totalPages = Math.ceil(filteredProducts.length / productsPerPage);
-
-  const goToPage = (pageNumber) => {
-    setCurrentPage(pageNumber);
-  };
+    first,
+    first + productsPerPage
+  );   //  UPDATED
 
   // ================= SORT =================
   const sortLowToHigh = () => {
     const sorted = [...filteredProducts].sort((a, b) => a.price - b.price);
     setFilteredProducts(sorted);
-    console.log(sorted,"sdfgh")
   };
 
   const sortHighToLow = () => {
     const sorted = [...filteredProducts].sort((a, b) => b.price - a.price);
     setFilteredProducts(sorted);
-    console.log(sorted ,"tttttt")
   };
 
   // ================= UI =================
   return (
     <div className="main-layout">
+
+      {/*  UPDATED (Required for ConfirmDialog UI) */}
+      <ConfirmDialog />
 
       {/* LEFT SIDE */}
       <div className="product-container">
@@ -132,21 +141,32 @@ const ProductPage = ({ wishlist, toggleWishlist }) => {   // NEW (props receive)
 
         {/* CONTROLS */}
         <div className="top-controls">
-          <input
-            type="text"
+          <InputText
             placeholder="Search product..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
 
-          <select onChange={(e) => setCategory(e.target.value)}>
-            <option value="all">All</option>
-            <option value="beauty">Beauty</option>
-            <option value="groceries">Groceries</option>
-          </select>
+          <Dropdown
+            value={category}
+            options={categoryOptions}
+            onChange={(e) => setCategory(e.value)}
+            placeholder="Select Category"
+          />
 
-          <button onClick={sortLowToHigh}>Price Low → High</button>
-          <button onClick={sortHighToLow}>Price High → Low</button>
+          <Button
+            label="Low → High"
+            icon="pi pi-arrow-up"
+            className="p-button-success"
+            onClick={sortLowToHigh}
+          />
+
+          <Button
+            label="High → Low"
+            icon="pi pi-arrow-down"
+            className="p-button-danger"
+            onClick={sortHighToLow}
+          />
         </div>
 
         {/* PRODUCTS */}
@@ -156,53 +176,36 @@ const ProductPage = ({ wishlist, toggleWishlist }) => {   // NEW (props receive)
           <>
             <div className="product-grid">
               {currentProducts.map((item) => {
-
-                // NEW (check wishlist)
-                const isWishlisted = wishlist.some(
-                  (w) => w.id === item.id
-                );
+                const isWishlisted = wishlist.some((w) => w.id === item.id);
 
                 return (
                   <div key={item.id} className="card-wrapper">
 
-                    {/* NEW ❤️ HEART ICON */}
-                    <div
-                      className="wishlist-icon"
+                    <Button
+                      icon={isWishlisted ? "pi pi-heart-fill" : "pi pi-heart"}
+                      className="p-button-rounded p-button-text wishlist-btn"
                       onClick={() => toggleWishlist(item)}
-                    >
-                      {isWishlisted ? "❤️" : "🤍"}
-                    </div>
-
-                    {/* ORIGINAL CARD */}
-                    <Card
-                      item={item}
-                      addToCart={addToCart}
                     />
 
+                    <Card item={item} addToCart={addToCart} />
                   </div>
                 );
               })}
             </div>
 
-            {/* PAGINATION */}
-            <div className="pagination">
-              {[...Array(totalPages)].map((_, index) => (
-                <button
-                  key={index}
-                  onClick={() => goToPage(index + 1)}
-                  className={currentPage === index + 1 ? "active" : ""}
-                >
-                  {index + 1}
-                </button>
-              ))}
-            </div>
+            {/* 🔥 PAGINATOR */}
+            <Paginator
+              first={first}
+              rows={productsPerPage}
+              totalRecords={filteredProducts.length}
+              onPageChange={(e) => setFirst(e.first)}
+            />
           </>
         )}
       </div>
 
-      {/* RIGHT SIDE CART  */}
+      {/* RIGHT SIDE CART */}
       <Cart cartItems={cartItems} removeFromCart={removeFromCart} />
-
     </div>
   );
 };
